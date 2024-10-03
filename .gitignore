@@ -1,0 +1,16 @@
+.env
+.venv
+env/
+venv/
+myenv/
+
+docs/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Flask
+instance/
+.webassets-cache
+
+.DS_Store
