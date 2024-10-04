@@ -24,12 +24,13 @@ tavily_tool = TavilySearchResults(max_results=5)
 
 python_repl_tool = PythonREPLTool()
 
-members = ["Researcher", "Coder", "Reviewer", "QA Tester"]
+members = ["Poetry Writer", "Researcher", "Coder", "Reviewer", "QA Tester"]
+
 system_prompt = (
     f"You are a supervisor agent tasked with managing the conversation between"
     f" the following members: {members}. Based on the following user request,"
-    f" repond with the worker to act next. Each worker will preform a task and"
-    f" respond with their results and status. When finished, respond with FINISH."
+    f" respond with the worker to act next. Each worker will preform a task and"
+    f" respond with their results and status. When finished, then respond with FINISH."
 )
 options = members + ["FINISH"]
 
@@ -62,6 +63,7 @@ prompt = ChatPromptTemplate.from_messages(
 ).partial(options=str(options), members=", ".join(members))
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, openai_api_key=openai_api_key)
+poetry_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5, openai_api_key=openai_api_key)
 
 supervisor_chain = (
     prompt
@@ -94,6 +96,13 @@ def agent_node(state, agent, name):
 research_agent = create_agent(llm, [tavily_tool], "You are a web researcher agent.")
 research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
 
+code_agent = create_agent(
+    llm,
+    [python_repl_tool],  # DANGER: This tool executes code locally. Use with caution.
+    "You may generate safe Python code to analyze data with pandas and generate charts using matplotlib.",
+)
+code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
+
 review_agent = create_agent(
     llm,
     [tavily_tool],
@@ -112,18 +121,15 @@ test_agent = create_agent(
 )
 test_node = functools.partial(agent_node, agent=test_agent, name="QA Tester")
 
-code_agent = create_agent(
-    llm,
-    [python_repl_tool],  # DANGER: This tool executes code locally. Use with caution.
-    "You may generate safe Python code to analyze data with pandas and generate charts using matplotlib.",
-)
-code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
+poetry_agent = create_agent(poetry_llm, [tavily_tool], "You are to write a short poem based upon the input given in the style of Dr Seuss")
+poetry_node = functools.partial(agent_node, agent=poetry_agent, name="Poetry Writer")
 
 workflow = StateGraph(AgentState)
 workflow.add_node("Reviewer", review_node)
 workflow.add_node("Researcher", research_node)
 workflow.add_node("Coder", code_node)
 workflow.add_node("QA Tester", test_node)
+workflow.add_node("Poetry Writer", poetry_node)
 workflow.add_node("supervisor", supervisor_chain)
 
 
