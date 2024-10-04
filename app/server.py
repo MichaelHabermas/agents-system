@@ -6,6 +6,10 @@ from fastapi import FastAPI
 app = FastAPI()
 
 @app.get("/")
+async def redirect_root_to_playground():
+    return RedirectResponse("/playground")
+
+@app.post("/docs/")
 async def redirect_root_to_docs():
     return RedirectResponse("/docs")
 

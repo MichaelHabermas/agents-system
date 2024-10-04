@@ -1,7 +1,9 @@
 from typing import Annotated, Any, Dict, List, Optional, Sequence, TypedDict
 import functools
 import operator
+import execjs
 
+# from langchain import Tool
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
@@ -72,9 +74,27 @@ supervisor_chain = (
     | JsonOutputFunctionsParser()
 )
 
+
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
     next: str
+
+
+@tool
+def run_javascript(code: str) -> str:
+    """
+    Executes JavaScript code and returns the result.
+    Input: JavaScript code as a string
+    Output: The result of the JavaScript execution as a string.
+    """
+    try:
+        # Create a JavaScript runtime environment and execute the code
+        js_runtime = execjs.compile("")
+        result = js_runtime.eval(code)
+        return str(result)
+    except Exception as e:
+        return f"Error executing JavaScript: {str(e)}"
+
 
 def create_agent(llm: ChatOpenAI, tools: list, system_prompt: str):
     prompt = ChatPromptTemplate.from_messages(
@@ -99,8 +119,8 @@ research_node = functools.partial(agent_node, agent=research_agent, name="Resear
 
 code_agent = create_agent(
     llm,
-    [python_repl_tool],  # DANGER: This tool executes code locally. Use with caution.
-    "You may generate safe Python code to analyze data with pandas and generate charts using matplotlib.",
+    [run_javascript],  # DANGER: This tool executes code locally. Use with caution.
+    "You may generate safe Javascript code to analyze data.",
 )
 code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
 
@@ -117,8 +137,8 @@ review_node = functools.partial(agent_node, agent=research_agent, name="Reviewer
 
 test_agent = create_agent(
     llm,
-    [python_repl_tool],  # DANGER: This tool executes code locally. Use with caution.
-    "You may generate safe Python code to test functions and classes using unittest or pytest.",
+    [run_javascript],  # DANGER: This tool executes code locally. Use with caution.
+    "You may generate safe Javascript code to test functions and classes using jest.",
 )
 test_node = functools.partial(agent_node, agent=test_agent, name="QA Tester")
 
