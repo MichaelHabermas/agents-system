@@ -44,6 +44,7 @@ function_def = {
             "next": {
                 "title": "Next",
                 "anyOf": [{"enum": options}],
+                "default": "Supervisor"
             }
         },
         "required": ["next"],
